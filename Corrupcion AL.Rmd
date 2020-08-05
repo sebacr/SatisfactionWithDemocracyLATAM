@@ -1,0 +1,313 @@
+---
+title: "Satisfacción con la democracia en países de América"
+author: "Roque Alfaro, Sebastian Cortinez, Kevin Carrasco, Francisco Delgado"
+date: "14 de octubre de 2019"
+output:
+  html_document:
+    highlight: tango # probar espresso
+    number_sections: TRUE # numera las secciones y subsecciones
+bibliography: Citas corrupcion.bib
+link-citations: yes
+csl: apa.csl
+---
+
+```{r setup, include=FALSE}
+# Este es el chunk de setup, opciones generales de chunks, se recomienda!
+knitr::opts_chunk$set(cache=FALSE, # guarda renderizaciones parciales, ahorra tiempo
+                      warning = FALSE, # evita publicar advertencias
+                      message = FALSE) # evita publicar mensajes
+#install.packages("citr")
+library(citr)
+Sys.setlocale("LC_ALL","ES_ES.UTF-8") # para temas de caracteres en español, recomendable
+
+```
+
+```{r results="hide", echo=FALSE, warning=FALSE, message=FALSE}
+##install.packages("pacman")
+pacman::p_load(lme4,
+               reghelper,
+               ggeffects,
+               haven,
+               stargazer,
+               ggplot2, # gráficos
+               dplyr, # manipulacion de datos
+               texreg,
+               ggeffects,
+               corrplot,
+               sjPlot,
+               Hmisc,
+               pander
+               ) # paquetes a cargar
+
+data_tot2 = read.csv("input/data_tot.csv", fileEncoding="latin1")
+data_tot3 = read.csv("input/data_tot3.csv", fileEncoding="latin1")
+## Categorizar edad
+data_tot2$Edad_Niveles<-car::Recode(data_tot2$Edad, "16:25=1;26:40=2;41:60=3;61:112=4")
+data_tot2$Edad_Niveles<-factor(data_tot2$Edad_Niveles,labels=c("16 a 25","26 a 40","41 a 60","61 o más"))
+data_tot2$Edad_Niveles<-as.numeric(data_tot2$Edad_Niveles)
+data_tot3$Edad_Niveles<-car::Recode(data_tot3$Edad, "16:25=1;26:40=2;41:60=3;61:112=4")
+data_tot3$Edad_Niveles<-factor(data_tot3$Edad_Niveles,labels=c("16 a 25","26 a 40","41 a 60","61 o más"))
+data_tot3$Edad_Niveles<-as.numeric(data_tot3$Edad_Niveles) 
+## Recodificar satisfaccion con la democracia
+data_tot2$Democracia<-car::Recode(data_tot2$Democracia, "1=4;2=3;3=2;4=1")
+data_tot3$Democracia<-car::Recode(data_tot3$Democracia, "1=4;2=3;3=2;4=1")
+## Recodificar satisfaccion con la Satisfaccion
+data_tot2$Satisfaccion<-car::Recode(data_tot2$Satisfaccion, "1=4;2=3;3=2;4=1")
+data_tot3$Satisfaccion<-car::Recode(data_tot3$Satisfaccion, "1=4;2=3;3=2;4=1")
+```
+
+# Abstract
+
+El retorno a la democracia para los países de América se gestó con la promesa de que traería cambios positivos en diferentes facetas de la vida ciudadana. No obstante, debido a la forma de implementar los sistemas democráticos y condiciones externas como la globalización y el sistema económico mundial, se ha generado insatisfacción de las personas con el sistema democrático. Por lo anterior, resulta importante identificar cuáles son los factores que influyen en un mayor o menor nivel de satisfacción con la democracia en los países de América. Para poder profundizar en esta temática, se realizará un análisis multinivel y se utilizara una base de datos de elaboración propia a partir de las bases de datos de 21 países de América de LAPOP 2016, la cual cuenta con un (N=29.468) casos. Los resultados del análisis sugieren que los factores que generan una disminución en la satisfacción con la democracia son los altos niveles de corrupción y los casos de coimas/sobornos que existen al interior de los países, fundamentalmente en el mundo político, generando en consecuencia bajos niveles de satisfacción con la vida en los ciudadanos.
+
+# Introducción 
+
+Durante la segunda mitad del siglo XX, los países de América, específicamente América latina y el Caribe, experimentaron procesos de democratización en sus territorios generando que se consolide la democracia como sistema de gobierno, reemplazando al autoritarismo que se había establecido, en su gran mayoría, por dictaduras militares. Este régimen, se instaló de manera generalizada en América Latina por primera vez en su historia [@garretonmerino_CienciasSocialesTrama_2014]. La democracia, entendiendo por ello como un sistema de gobierno, fue el principal elemento en el proceso de modernización en los países de Latinoamérica, debido a la legitimidad política que adquiere en la época actual [@alister_DemocraciaLatinoamericaQue_2015]. De esta manera, las democracias se han afianzado en la región por el peso de variables tanto internas como externas. Por un lado,  las primeras refieren a que este régimen se consolidó al interior de los países producto de la promesa de que este sistema traería consigo cambios positivos en diferentes facetas de la vida ciudadana [@olmeda_QueHayDetras_2019]. Por otro lado, las segundas refieren a que se ve influenciada "por la globalización, instituciones internacionales y el sistema económico mundial". [@alister_DemocraciaLatinoamericaQue_2015, p. 87]
+
+
+Sin embargo, en la actualidad, la democracia ha experimentado una profunda deslegitimación por parte de los ciudadanos, expresándose en un bajo nivel de satisfacción -o insatisfacción- de democracia que observan en sus respectivos países [@olmeda_QueHayDetras_2019]. Lo anterior guarda relación con que los regímenes democráticos se instalaron en América Latina al alero de una crisis política, que refiere a la pérdida de legitimidad para organizar la vida en común, del principio de representación y de su capacidad de dar un sentido colectivo [@garretonmerino_CienciasSocialesTrama_2014]. Además, este bajo nivel de satisfacción es generada por la mala gestión de los gobiernos, la promoción de políticas gubernamentales que no generan mejoras en los aspectos de la vida de los ciudadanos y las violencias con las que se imponen y se mantienen las democracias en Latinoamérica. Estas características se engloban en un proceso denominado "desorden democrático" [@sanchez_PorQueSe_2004]. En este sentido, también hay otros factores que inciden en los niveles de la satisfacción con la democracia, como la corrupción, puesto que tiene un impacto significativo en la calidad de las democracias y en el desarrollo de los paises de Latinoamerica [@ramos_ControlCorrupcionAmerica_2019a]. Asimismo, el desarrollo económico de cada país guarda relación con la satisfacción de los niveles de democracia, ya que el desarrollo sostenido de la economía le otorga legitimidad y estabilidad [@diamond_ReconsideracionNexoEntre_1992]
+
+Con respecto a estudios anteriores, referidos al declive de la confianza en la democracia en América Latina, se pueden nombrar "El control de la corrupcion de America Latina" [@ramos_ControlCorrupcionAmerica_2019a], que refieren a cómo la corrupción impacta en la percepción de los ciudadanos respecto a las agendas políticas de los distintos países de la región. En esa misma línea, se puede nombrar "Corrupción en América Latina: entendiendo la brecha percepción-exposición" [@bohn_CorruptionLatinAmerica_2012], que explica la diferencia entre percepción y exposición a la corrupción, siendo la primera la que disminuye significativamente la satisfacción de los ciudadanos con la democracia, mientras que la última no lo hace. 
+
+Otro estudio que se relaciona es "Corrupción y Democracia" [@moralesquiroga_CorrupcionDemocraciaAmerica_2009], el cual se suma a que existe un amplio consenso de que la corrupción tiene un impacto negativo en la democracia, pero diferencia al considerar el impacto de la percepción y la victimización sobre los niveles de legitimidad y satisfacción con el régimen en los paises de America Latina. A lo anterior, también se suma lo estudiado por la corporación @latinobarometro_Informe2018_2018, donde estudia entre otras cosas, la satisfacción con la democracia en 18 países de América Latina con muestras representativas de la población nacional de cada país, de 1.000 y 1.200 casos, con un margen de error de alrededor del 3%. 
+
+Por último, El índice de percepción de corrupción (IPC) en 2018, el cual incluye a 180 países, señala que existe incapacidad de la gran mayoría de los países, en específico latinoamericanos, de controlar la corrupción. Sostienen que "La corrupción socava la democracia y genera un círculo vicioso que provoca el deterioro de las instituciones democráticas, que progresivamente van perdiendo su capacidad de controlar la corrupción". Para medir lo anterior, el IPC se nutre de 13 encuestas y evaluaciones realizadas por expertos para medir la corrupción en el sector público de 180 países y territorios, a los cuales se les asigna una puntuación de 0 (corrupción elevada) a 100 (transparencia elevada).
+
+En este sentido, es que se hace relevante que se estudie el  fenómeno de la satisfacción con la democracia, desde una perspectiva multidimensional, es decir, que comprenda la complejidad de esta institución y que no sea simplificada en la práctica de ejercer el sufragio y elegir periódicamente a los representantes políticos de cada país. Estas perspectivas se desarrollarán, desde el aporte distintivo, académico y disciplinar de la Sociología, que puede aportar significativamente articulando estas dimensiones mediante enfoques metodológicos y técnicas Cuantitativas [@martin_PerspectivaCualitativaPerspectivaCuantitativa_1983]. Teniendo en cuenta además la información que nos entrega la disciplina respecto a que los individuos responden a su contexto social, pues es "un reclamo definitorio de la disciplina sociológica" [@diprete_MultilevelModelsMethods_1994a] 
+
+Las crisis políticas, de corrupción y económicas repercuten directamente en los índices de satisfacción con la democracia y la vida de los ciudadanos en sus respectivos países [@latinobarometro_Informe2018_2018]. En esta perspectiva, la posible interacción entre variables individuales como satisfacción con la democracia, satisfacción con la vida, sobornos y la  economía se vinculan con las variables contextuales que son el promedio de satisfacción con la vida, promedio de percepción de corrupción y promedio de percepción económica, como también el PIB, el índice Gini y el índice de delincuencia, las cuales nos darán a conocer el efecto que tienen en los resultados de las variables individuales, esto es los niveles de satisfacción con la democracia. Además, se incluirán variables de control como Edad, Educación y Sexo.
+
+Este trabajo se propone explicar percepciones de los ciudadanos respecto a su satisfacción con la democracia, mediante la aplicación de modelos multinivel puesto que se utilizan en sociología para especificar el efecto del contexto social en los resultados a nivel individual [@diprete_MultilevelModelsMethods_1994a]. En efecto, se aplicará una estimación de interacción entre niveles, con la finalidad de dar cuenta de la variabilidad de la pendiente en función de una variable contextual, como también, conocer la moderación de la influencia por otra variable.  De este modo, la pregunta que guiará este estudio es ¿Cuáles son los factores que inciden mayormente en un mayor/menor nivel de satisfacción con la democracia en los países de América?. 
+
+# Objetivos e Hipótesis:
+
+### Objetivo central: 
+
+El objetivo principal de la presente investigación es identificar cuales son los factores que influyen en un mayor o menor nivel de satisfacción con la democracia en países de América. 
+
+### Objetivos específicos:
+
+De este objetivo se desprenden los siguientes objetivos específicos: 
+
+1. Conocer la relación específica entre la satisfacción con la democracia y la percepción en la corrupción de políticos en los países de América.
+
+2. Identificar la importancia que puedan tener los casos de coimas/sobornos en la satisfacción con la democracia en América.
+
+3. Dar cuenta de la diferencia del efecto de las variables independientes sobre la satisfacción con la democracia según las subdivisiones de América, en este caso América anglosajona (Canadá y EE.UU.) y América Latina y el Caribe. 
+
+### Hipótesis:
+
+Hipótesis de nivel 1:  A medida que se percibe una peor economía, una baja satisfacción con la vida y  una percepción de mayor corrupción política, se tiene una baja satisfacción con la democracia.
+
+Hipótesis de nivel 2: A medida que se percibe por país, una peor economía, una baja satisfacción con la vida y  una percepción de mayor corrupción política, se tiene, de manera agrupada,  una baja satisfacción con la democracia.
+
+# Metodología (datos, variables, métodos)
+
+La base de datos utilizada es una "elaboración propia" a partir de las bases de datos de 21 países de América de LAPOP 2016 y cuenta con 29.468 casos. Dentro de los países considerados se encuentran: Argentina, Bolivia, Brasil, Canadá, Chile, Colombia, Costa Rica, Ecuador, El Salvador, Estados Unidos, Guatemala, Haití, Honduras, México, Nicaragua, Panamá, Paraguay, Perú, República Dominicana, Uruguay y Venezuela.
+Las variable dependiente seleccionada se denomina como "Democracia" y se enfoca en la satisfacción que las personas tienen sobre el funcionamiento de la democracia en su país, con el valor 1 como  "Muy Insatisfecho(a)" y el valor 4 como "Muy Satisfecho(a)". 
+
+Para predecir la variación que tiene la satisfacción con la democracia en cada país se seleccionaron variables independientes de nivel 1 que apuntan hacia la percepción individual de los encuestados, y variables independientes de nivel 2 que podrían estar afectando a nivel contextual en esta percepción.
+
+Entre las variables de nivel 1, se encuentra en primer lugar, la variable independiente "Corrupción" que aborda la cantidad de políticos que las personas creen que están involucrados en casos de corrupción, con el valor 1 como "ninguno" y el 5 como "todos". En segundo lugar, la variable "satisfacción" refiere al nivel de satisfacción con la vida que poseen las personas, con el valor 1 como "Muy Insatisfecho" y el valor 4 como "Muy Satisfecho". En tercer lugar, la variable "Economía" hace referencia a la consideración de las personas sobre si la situación económica del país es mejor o peor que hace 12 meses, con el valor 1 como "Mejor" y el valor 3 como "Peor". Por otro lado, la variable independiente "Soborno" aborda el hecho de que, si en los últimos 12 meses, algún funcionario público le ha solicitado un soborno y posee las categorías de respuesta "No" y "Si". Sin embargo, esta variable no se encuentra para los países de América del Norte, por lo que se trabajará con ella de manera comparada en un segundo modelo. Finalmente, las variables "Edad", "Educación" y "Sexo" serán agregadas en el modelo como variables de control.
+
+Entre las variables de nivel 2 se hallan, por un lado, variables idiosincráticas sacadas de la base de datos "Quality of Government" 2017, entre las cuales se encuentran "Índice de corrupción política" (Cor. politic), el Índice de Gini y el PIB de los países. Por otra parte, se construyeron variables a partir del promedio de datos agregados de las variables: Corrupción (meancor), Satisfacción (meansas) y Economía (meaneco).
+
+De esta forma, se utilizará la técnica de regresión estadística, que permite conocer la variación de una variable dependiente de acuerdo a la variación de una variable independiente, además de predecir el valor de una variable en condiciones determinadas por las variables independientes. Sin embargo, el modelo utilizado para estimar las variaciones en la Satisfacción con la Democracia en los países de América corresponde a un modelo de regresión multinivel, ya que este permite contrastar hipótesis que abarcan relaciones entre niveles, además de corregir las estimaciones de las variables individuales cuando existe dependencia contextual, al descomponer la varianza de los residuos entre y dentro de los países. Por último, cabe destacar que se realizará un análisis diferenciado entre modelos, donde el modelo 1 será  "Norte-centro-sur" (incluyendo a Canadá y EE.UU.) y el modelo 2 será  "Centro-sur" (sin estos 2 países) ante la ausencia de la pregunta por la variable "soborno" en Canadá y EE.UU.
+
+__Tabla 1__
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+data_tot2$Sexo<-as.numeric(data_tot2$Sexo)
+data_tabla1=data_tot2 %>%
+  dplyr::select(Edad,Sexo,Democracia,Corrupcion,Economia)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+stargazer(data_tabla1, type = "html", digits=1)
+```
+
+
+Tal como se observa en la Tabla 1, se considera un N de 29.468 casos, siendo la unidad de esta los individuos pertenecientes a los países anteriormente señalados de Norte, Centro y Sur América.
+
+La media en la edad de las personas es de 39,9 años, con una desviación estándar de 16,2, en donde para el percentil 25 corresponden los 26 años y para el 75 los 51 años. El(los) individuo(s) de menor edad corresponde a los 16 años, mientras que el(los) de máxima edad a los 112 años.
+
+En cuanto a la variable dependiente, referente a la satisfacción con la democracia, se puede observar que el promedio es 2,7 -con una desviación estándar de 0,8-, por lo que la respuesta promedio se acerca a la categoría de "Insatisfecho". 
+
+La variable de percepción de corrupción en políticos cuenta con un promedio de 3,7 -con una desviación estándar de 1,1-, por lo que existe una tendencia en la percepción en la dirección de que "Casi todos" o "Todos" los políticos son corruptos. A esto se agrega que un 75% de los datos se encuentra de 5 hacia abajo.
+
+Para la consideración de las personas en cuanto al mejoramiento o empeoramiento de la situación económica del país, la media es de 2,5 -con una desviación estándar de 0,7-, lo cual refleja que la gran mayoría de los individuos perciben un empeoramiento en la situación económica de su país. Además, un 75% de los datos es inferior a 3. 
+
+La variable Sexo, donde 1 es Hombre y 2 Mujer, cuenta con una media de 1.5, es decir que basándose en el promedio un 50% de la muestra son Hombres y un 50% son Mujeres.
+
+Sin embargo, en la Tabla 1 no se incluyen la variable "Soborno" debido a que no está en la base de datos de todos los países de América, específicamente en  Canadá y EEUU. En igual forma, la variable "Educación"  no se incluye, debido a que esta posee una diferente escala de medición para cada país. 
+ 
+
+# Resultados
+
+__Gráfico 1__ 
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+data_tot2$Sexo<-car::Recode(data_tot2$Sexo, "1=1;2=2")
+data_tot2$Sexo<-factor(c(0,1),labels=c("Hombre","Mujer"))
+grafico_circulos=data_tot2 %>% select(Democracia, Corrupcion, Satisfaccion, Economia, Edad) %>% cor()
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+corrplot.mixed(grafico_circulos)
+```
+
+En el Gráfico 1 se presentan las variables analizadas y la correlación entre estas.
+
+Es posible reconocer una baja correlación positiva entre edad y satisfacción con la democracia  (r=0.05) y entre edad y percepción de la corrupción en políticos (r=0.09). Es decir, a mayor edad, menor es la satisfacción con la democracia, y mayores la percepción de corrupción.
+
+La variable de percepción de corrupción en políticos correlaciona de manera baja y negativa con la satisfacción con la democracia (r=-0,27). De esto se desprende que a mayor percepción de corrupción en políticos tengan los individuos, menos satisfechos se encontrarán con la democracia. También es importante señalar que se encontró una correlación baja y positiva entre la variable de Corrupción con la percepción de la situación económica del país (r=0,21), interpretándose que mientras se perciba mayor corrupción en políticos, se tenderá a pensar que la situación económica de su país se encuentra peor.
+
+La satisfacción con la vida tiene una baja correlación negativa con la satisfacción de la democracia (r=0,14), en donde se tiene que mientras más satisfecho se esté con la vida, más satisfecho se está con la democracia.
+
+La percepción de la situación económica del país se correlaciona de manera negativa y baja con la satisfacción con la democracia (r=-0,24), desprendiéndose que en la medida en que se percibe una peor situación económica para su país, más insatisfecho se está con la democracia. 
+
+__Tabla 2__
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+cor_intraclase = lmer(Democracia ~ 1 + (1 | pais), data = data_tot2)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+reghelper::ICC(cor_intraclase, type = "html")
+```
+
+La correlación intra-clase indica qué porcentaje de la varianza de la variable dependiente se debe a la pertenencia a unidades de nivel 2. Por lo tanto, tal como se ve en la Tabla 2, la varianza de la variable Satisfacción con la Democracia se debe en un 10% a la pertenencia a un determinado país.
+
+__Tabla 3__
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+## regresion nivel 1
+reg_lvl1.1 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Educacion_Niveles + Edad_Niveles + Sexo + (1 | pais), data = data_tot2)
+reg_lvl1.2 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Educacion_Niveles + Edad_Niveles + Sexo + Soborno + (1 | pais), data = data_tot3)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+htmlreg(list(reg_lvl1.1,reg_lvl1.2))
+```
+
+En la Tabla 3 se presenta la variación de la variable dependiente Satisfacción con la Democracia en función de las variables independientes de nivel 1. Así, el modelo 1 permite introducir un efecto aleatorio en la variable dependiente. La variable Corrupción indica que por cada unidad que esta aumente, la satisfacción con la democracia disminuye en 0.14 unidades en promedio. Asimismo, las variables Satisfacción y Economía disminuyen en 0.09 y 0.17 unidades la satisfacción con la democracia en promedio, respectivamente, por cada unidad que ellas aumenten. Estas tres variables independientes poseen un 99,9% de significación estadística para todos los individuos.
+
+El modelo 2 de la Tabla 3 muestra la variación de la Satisfacción con la democracia en los países de Centro y Sur América. La variable Soborno indica que por cada unidad que esta aumente, la satisfacción con la democracia disminuye en 0.12 unidades en promedio, con un 99,9% de significación estadística para todos los individuos. En cuanto a la educación, es posible observar de manera general que en la medida en que aumenta, disminuye la satisfacción con la democracia. Las variables Sexo y Edad presentan un efecto muy pequeño por lo que no se mencionará. No obstante, en ambos es negativo.
+
+
+__Tabla 4__
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+data_tot2 <- data_tot2 %>%
+  group_by(pais) %>%
+  mutate(meancor = mean(Corrupcion))
+data_tot3 <- data_tot3 %>%
+  group_by(pais) %>%
+  mutate(meancor = mean(Corrupcion))
+data_tot2 <- data_tot2 %>%
+  group_by(pais) %>%
+  mutate(meansas = mean(Satisfaccion))
+data_tot3 <- data_tot3 %>%
+  group_by(pais) %>%
+  mutate(meansas = mean(Satisfaccion))
+data_tot2 <- data_tot2 %>%
+  group_by(pais) %>%
+  mutate(meaneco = mean(Economia))
+data_tot3 <- data_tot3 %>%
+  group_by(pais) %>%
+  mutate(meaneco = mean(Economia))
+data_tot2$Gini<-as.numeric(data_tot2$Gini)
+data_tot3$Gini<-as.numeric(data_tot3$Gini)
+reg_lvl2.1 = lmer(Democracia ~ 1 + meancor + meansas + meaneco + Gini + Cor.politic + (1 | pais), data = data_tot2)
+reg_lvl2.2 = lmer(Democracia ~ 1 + meancor + meansas + meaneco + Gini + Cor.politic + (1 | pais), data = data_tot3)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+htmlreg(list(reg_lvl2.1,reg_lvl2.2))
+```
+
+En la Tabla 4 se presenta la variación de la variable dependiente Satisfacción con la Democracia en función de las variables independientes de nivel 2. Así, en el modelo 1 y 2 se pueden observar tres variables independientes que corresponden a variables agregadas. Se utilizará el modelo 1 debido a que incluye a todos los países. La primera variable es el promedio de la percepción del nivel de corrupción a nivel país, que indica que por cada unidad que esta aumente, la satisfacción con la democracia disminuye en 0.40 unidades, con un 99,9% de significación estadística para todos los países, la segunda es el promedio de satisfacción con la vida por país, que señala que por cada unidad que esta aumente, la satisfacción con la democracia aumenta en 0.55 unidades, con un 99,9% de significación estadística para todos los países de América. La tercera variable, del promedio de la percepción de la situación económica del país, no posee significación estadística. De la misma forma, se presentan tres variables idiosincráticas, estas no poseen un efecto grande en la variación de la Satisfacción con la Democracia y solo el índice Gini posee un 95% de significación estadística para todos los países.
+ 
+Por su parte, en el modelo 2 no se presentan variaciones significativas, salvo que el índice Gini aumenta su significación a un 99% para todos los países de Centro y Sur América.
+
+__Tabla 5__ 
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+reg_aleatoria.1 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + (1 | pais), data = data_tot2)
+reg_aleatoria.1.2 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + (1 + Corrupcion | pais), data = data_tot2)
+reg_aleatoria.2 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + Soborno + (1 | pais), data = data_tot3)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+htmlreg(list(reg_aleatoria.1,reg_aleatoria.2))
+```
+
+En la Tabla 5 se presenta la variación de la variable dependiente Satisfacción con la Democracia en función de las variables independientes de nivel 1 y nivel 2. Así, en el modelo 1 la percepción de corrupción política a nivel individual indica que por cada unidad que esta aumente, la satisfacción con la democracia disminuirá en 0.14 unidades, con un 99,9% de significación estadística para todos los individuos de todos los países de América. 
+ 
+Asimismo, por cada unidad que aumenten la Satisfacción con la vida y la percepción de la situación económica del país, la satisfacción con la democracia aumentará en 0.09 y disminuirá en 0.17 unidades, respectivamente, con un 99,9% de significación estadística para todos los individuos de todos los países de América. En cuanto a las variables de nivel 2, las que poseen un mayor efecto son el promedio de la satisfacción con la vida y el promedio de la percepción de la corrupción política, que indican que por cada unidad que estas aumenten, la satisfacción con la democracia aumentará en 0.47 y disminuirá en 0.24 unidades respectivamente, con un 99% de significación estadística para todos los individuos de todos los países de América.
+ 
+Por su parte, el modelo 2, en comparación con el modelo 1, presente una leve baja en los efectos de las variables independientes de nivel 1, pero mantienen su significación estadística. En este modelo se agrega la variable soborno, que indica que por cada unidad que esta aumente, la satisfacción con la democracia disminuirá en 0.14 unidades en promedio, con un 99,9% de significación estadística para todos los individuos de todos los países. Asimismo, las variables independientes de nivel 2 disminuyen sus efectos y la variable Media por país de percepción de la corrupción (Meancor) disminuye su significación estadística a 95% y la variable Media por país de satisfacción con la vida (Meansas) baja a un 99% de significación estadística.
+
+
+__Gráfico 2__
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+reg_data=lmer(Democracia ~ 1 + Corrupcion + Economia +( 1 + Corrupcion | pais), data = data_tot2)
+graf2=ggpredict(reg_data, terms = c("Corrupcion","pais [sample=9]"), type="re")
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+plot(graf2)
+```
+
+__Tabla 6__
+
+```{r echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+reg_aleatoria.3 = lmer(Democracia ~ 1 + Corrupcion + Sexo + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + (1 + meancor | pais), data = data_tot2)
+reg_aleatoria.4 = lmer(Democracia ~ 1 + Corrupcion + Sexo + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + Soborno + (1 + meancor | pais), data = data_tot3)
+reg_aleatoria.1.2.2 = lmer(Democracia ~ 1 + Corrupcion + Satisfaccion + Economia + Gini + meancor + meansas + meaneco + Cor.politic + Corrupcion*meancor + (1 + Corrupcion | pais), data = data_tot2)
+```
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+htmlreg(list(reg_aleatoria.3,reg_aleatoria.4))
+```
+
+En la tabla 6 se presenta la variación de la variable dependiente Satisfacción con la Democracia en función de las variables independientes de nivel 1 y nivel 2 y se agrega una pendiente aleatoria a la variable independiente del promedio de percepción de corrupción política por país. Esta relación entre la variable dependiente y Corrupción mediante la pendiente aleatoria posee una representación más esquematizada en el Gráfico 2. Así, Corrupción, Satisfacción y Economía presentan valores similares a los modelos de las tablas anteriores, con la misma significación estadística, para los modelos 1 y 2, mientras que la variable Soborno también se mantiene constante en el modelo 2.  En el caso de la inclusión del efecto aleatorio a la pendiente de la variable Corrupción, provoca que varíe la percepción de la corrupción política del país en covariación con el intercepto, esta covariación posee un valor de -0.04.
+
+__Tabla 7__
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+pander(anova(reg_aleatoria.1,reg_aleatoria.1.2))
+```
+
+Por último, es necesario preguntarse acerca de la posible interacción entre variables, es decir, qué variables de nivel 2 moderan la influencia de la variable "Corrupción", sobre la satisfacción con la democracia. Para esto, se realizó una prueba anova (tabla 7) que nos muestra que el efecto de dicha moderación es significativo al 99.9% (p valor = 6.942e-12***).
+
+__Tabla 8__ 
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+htmlreg(list(reg_aleatoria.1,reg_aleatoria.1.2,reg_aleatoria.1.2.2))
+```
+
+__Plot__
+
+```{r echo="asis", results="asis", warning=FALSE, message=FALSE}
+plot_model(reg_aleatoria.1.2.2, type = "int")
+```
+
+Este resultado nos da pie a estimar un modelo con interacción entre variables, en este caso, la variable "Corrupción" (nivel 1) ya nombrada y "meancor" (nivel 2) el cual puede apreciarse en la tabla 8 y graficado en el el gráfico 3. Como se observa en la tabla 8, la pendiente de satisfacción con la democracia en relación con la percepción de corrupción individual será de -0.38 puntos con un 99.9% de significación en países con una percepción de la corrupción promedio a nivel grupal. Esto quiere decir que, en países que presenten un nivel de percepción de corrupción menor, o que sean más transparentes, la percepción sobre la corrupción de los ciudadanos influirá menos en la satisfacción que tengan con sus democracias, tal como se ve reflejado en el gráfico 3. Del mismo modo, en el gráfico también se da cuenta de que, los países con un nivel de percepción de corrupción menor al nivel general, tienen ciudadanos más satisfechos que países con índices de corrupción más alto. A modo de conclusión es preciso decir que, como se ve en la tabla 8, la relación entre la satisfacción con la democracia y la percepción individual de la corrupción se vuelve más fuerte 0.07 unidades en países con mayores índices de corrupción.
+
+
+# Conclusiones
+
+Los principales hallazgos del estudio, en términos generales, señalan que, a mayor percepción de una peor economía, una baja satisfacción con la vida y  una percepción de mayor corrupción política, se tiene una menor satisfacción con la democracia.  Esto se expresa en que las variables Satisfacción -con la vida- aumenta en 0.09 unidades la satisfacción con la democracia y la variable Economía disminuye en 0.17 unidades la satisfacción con la democracia en promedio, por cada unidad que ellas aumenten. Por su parte, en la medida en que la variable Corrupción aumenta en una unidad, disminuye la satisfacción con la democracia en 0.14.
+
+En relación a las variables de nivel 2, se puede dar cuenta que la satisfacción con la vida en su nivel agregado es el factor que más explica la variación de la Satisfacción con la democracia, ya que en la mayoría de los modelos presenta valores cercanos a 0.50 unidades, con significación estadística en la mayoría de los casos. Con respecto a la percepción del nivel de corrupción política por país, el promedio por país indica que por cada unidad que esta aumenta, la satisfacción con la democracia disminuye en 0.26 unidades. Por lo que, a mayor percepción de corrupción en políticos que tengan en promedio los individuos, más insatisfechos se encontrarán con la democracia. Respecto al promedio de percepción de la economía por país, esta no presenta una variación  significativa en la satisfacción de la democracia. No obstante, la variación de la Satisfacción con la democracia en los países de Centro y Sur América que incluye la variable Soborno, indica que por cada unidad que está aumente, la satisfacción con la democracia disminuye en 0.14 unidades en promedio.
+
+Con respecto a las ventajas de utilizar el método multinivel, este permite contrastar hipótesis entre niveles, por lo que se puede evidenciar si, en este caso, la Satisfacción con la Democracia varía en mayor medida por variables individuales o por variables contextuales, o incluso, si es que las variables individuales están condicionadas por situaciones contextuales. De esta manera, el método multinivel permite ir más allá de los resultados tradicionales que entrega la regresión estadística, enfocándose en el contexto situacional de cada individuo.
+
+Dentro de las limitaciones y dificultades de este estudio encontramos las diferencias de cuestionarios entre Canada y Estados Unidos en comparación con el resto de América por lo que se realizó  un análisis diferenciado entre modelos "Norte-centro-sur" (incluyendo a Canadá y EE.UU.) y "Centro-sur" (sin estos 2 países) ante la ausencia de la pregunta por la variable "soborno" en Canadá y EE.UU. Además, el no contar con datos actualizados de los países Nicaragua y Venezuela dificultó la viabilidad de este estudio, puesto que actualmente las realidades de esos países pudieron sufrir cambios respecto a los niveles de cómo los ciudadanos perciben la democracia y su satisfacción con la vida.  
+
+Finalmente pensando en futuras investigaciones en el área, y en línea con lo ya mencionado, se recomienda proceder con cautela en este tipo de análisis dado las diferencias internas entre los países de América, y también las diferencias que presentan en cuanto a producción de datos e indicadores que dificultan su integración dentro de un modelo a nivel continental. 
+ 
+
+# Bibliografía
+
